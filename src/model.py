@@ -1,4 +1,4 @@
-from src.utils import trunc_normal_
+from src.utils import trunc_normal_, cosine_scheduler, get_params_groups
 import torchvision.models as models
 import pytorch_lightning as pl
 import torch.distributed as dist
@@ -15,13 +15,22 @@ class DINOModel(pl.LightningModule):
         use_bn_in_head: bool = False,
         norm_last_layer: bool = True,
         model_name: str = "resnet18",
+        lr: float = 0.0005,
+        min_lr: float = 0.0001,
+        batch_size_per_gpu: int = 64,
+        warmup_epochs: int = 10,
+        weight_decay: float = 0.04,
+        weight_decay_end: float = 0.4,
         warmup_teacher_temp: float = 0.04,
         teacher_temp: float = 0.04,
         warmup_teacher_temp_epochs: int = 30,
         student_temp: float = 0.1,
         center_momentum: float = 0.9,
         local_crops_number: int = 8,
+        momentum_teacher: float = 0.996,
+        world_size: int = 1,
         n_epochs: int = 100,
+        n_dataloader_steps: int = 1000,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -55,6 +64,25 @@ class DINOModel(pl.LightningModule):
             )
         )
 
+        self.momentum_schedule = cosine_scheduler(
+            momentum_teacher, 1, n_epochs, n_dataloader_steps
+        )
+
+        self.lr_schedule = cosine_scheduler(
+            lr * (batch_size_per_gpu * world_size) / 256.0,
+            min_lr,
+            n_epochs,
+            n_dataloader_steps,
+            warmup_epochs=warmup_epochs,
+        )
+
+        self.wd_schedule = cosine_scheduler(
+            weight_decay,
+            weight_decay_end,
+            n_epochs,
+            n_dataloader_steps,
+        )
+
         # ViT models do not use BatchNorm
         if model_name.startswith("resnet"):
             self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
@@ -70,8 +98,30 @@ class DINOModel(pl.LightningModule):
         teacher_output = self.teacher(x[:2])
         student_output = self.student(x)
 
+        teacher_feats = teacher_output.detach()
+        feat_var = torch.var(teacher_feats, dim=-1, unbiased=False)
+        mean_feat_var = feat_var.mean()
+
+        feat_l2 = torch.linalg.norm(teacher_feats, ord=2, dim=-1)
+        mean_feat_l2 = feat_l2.mean()
+        std_feat_l2 = feat_l2.std(unbiased=False)
+
         loss = self._calculate_loss(student_output, teacher_output)
+
+        self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=True)
+        self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=True)
+        self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=True)
+        self.log("train_loss", loss, prog_bar=True, sync_dist=True)
+
         return loss
+
+    @torch.no_grad()
+    def _ema_update(self, batch_idx):
+        m = self.momentum_schedule[batch_idx]
+        for param_q, param_k in zip(
+            self.student.parameters(), self.teacher.parameters()
+        ):
+            param_k.data.mul_(m).add_((1 - m) * param_q.detach().data)
 
     def _calculate_loss(self, student_output, teacher_output):
         student_out = student_output / self.student_temp
@@ -103,6 +153,32 @@ class DINOModel(pl.LightningModule):
         self.center = self.center * self.center_momentum + batch_center * (
             1 - self.center_momentum
         )
+
+    def optimizer_step(
+        self,
+        epoch,
+        batch_idx,
+        optimizer,
+        optimizer_closure,
+    ):
+        for i, param_group in enumerate(optimizer.param_groups):
+            param_group["lr"] = self.lr_schedule[batch_idx]
+            if i == 0:  # only the first group is regularized
+                param_group["weight_decay"] = self.wd_schedule[batch_idx]
+
+        optimizer.zero_grad()
+
+        # normal optimizer step
+        optimizer.step(closure=optimizer_closure)
+
+        self._ema_update(batch_idx)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(
+            # Some parameters, like biases, were not regularized in the original DINO code
+            get_params_groups(self.student),
+        )
+        return optimizer
 
 
 class BaseModel(nn.Module):
