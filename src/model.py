@@ -122,14 +122,14 @@ class DINOModel(pl.LightningModule):
 
         loss = self._calculate_loss(student_output, teacher_output)
 
-        self.log("teacher_entropy", teacher_entropy, prog_bar=False, sync_dist=True)
+        self.log("teacher_entropy", teacher_entropy, prog_bar=False, sync_dist=False)
         self.log(
-            "teacher_student_kl", teacher_student_kl, prog_bar=False, sync_dist=True
+            "teacher_student_kl", teacher_student_kl, prog_bar=False, sync_dist=False
         )
-        self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=True)
-        self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=True)
-        self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=True)
-        self.log("train_loss", loss, prog_bar=True, sync_dist=True)
+        self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=False)
+        self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=False)
+        self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=False)
+        self.log("train_loss", loss, prog_bar=True, sync_dist=False)
 
         return loss
 
