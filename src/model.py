@@ -107,13 +107,10 @@ class DINOModel(pl.LightningModule):
         # The teacher only takes the global views, which are always the first two elements
         with torch.no_grad():
             teacher_output = self.teacher(x[:2])
-        teacher_output = teacher_output.detach()
-
         student_output = self.student(x)
-        student_output_detached = student_output.detach()
 
         teacher_entropy, teacher_student_kl = self._compute_teacher_student_metrics(
-            teacher_output, student_output_detached
+            teacher_output, student_output
         )
 
         teacher_feats = teacher_output.detach()
@@ -126,33 +123,13 @@ class DINOModel(pl.LightningModule):
 
         loss = self._calculate_loss(student_output, teacher_output)
 
+        self.log("teacher_entropy", teacher_entropy, prog_bar=False, sync_dist=True)
         self.log(
-            "teacher_entropy", teacher_entropy.detach(), prog_bar=False, sync_dist=True
+            "teacher_student_kl", teacher_student_kl, prog_bar=False, sync_dist=True
         )
-        self.log(
-            "teacher_student_kl",
-            teacher_student_kl.detach(),
-            prog_bar=False,
-            sync_dist=True,
-        )
-        self.log(
-            "teacher_feat_var_mean",
-            mean_feat_var.detach(),
-            prog_bar=False,
-            sync_dist=True,
-        )
-        self.log(
-            "teacher_feat_l2_mean",
-            mean_feat_l2.detach(),
-            prog_bar=False,
-            sync_dist=True,
-        )
-        self.log(
-            "teacher_feat_l2_std",
-            std_feat_l2.detach(),
-            prog_bar=False,
-            sync_dist=True,
-        )
+        self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=True)
+        self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=True)
+        self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=True)
         # Here we are detaching the loss, to avoid some weird C++ warning from PyTorch
         self.log("train_loss", loss.detach(), prog_bar=True, sync_dist=True)
 
