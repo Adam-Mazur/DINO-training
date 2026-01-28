@@ -36,6 +36,7 @@ def main(cfg: DictConfig):
         batch_size=cfg.model.train.batch_size_per_gpu,
         shuffle=True,
         num_workers=cfg.machine.num_workers,
+        pin_memory=True,
         drop_last=True,
     )
 
