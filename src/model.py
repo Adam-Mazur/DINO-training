@@ -17,7 +17,7 @@ class DINOModel(pl.LightningModule):
         norm_last_layer: bool = True,
         model_name: str = "resnet18",
         patch_size: int | None = None,
-        drop_path_rate: float | None = None,
+        drop_path_rate: float = 0.0,
         lr: float = 0.0005,
         min_lr: float = 0.0001,
         batch_size_per_gpu: int = 64,
@@ -237,7 +237,7 @@ class BaseModel(nn.Module):
         norm_last_layer: bool,
         model_name: str = "resnet18",
         patch_size: int | None = None,
-        drop_path_rate: float | None = None,
+        drop_path_rate: float = 0.0,
     ):
         super().__init__()
 
@@ -260,7 +260,11 @@ class BaseModel(nn.Module):
         else:
             raise ValueError(f"Unsupported model name: {model_name}")
 
-        embed_dim = self.backbone.fc.weight.shape[1]
+        if model_name.startswith("resnet"):
+            embed_dim = self.backbone.fc.weight.shape[1]
+        else:
+            embed_dim = self.backbone.embed_dim
+
         self.backbone.fc = nn.Identity()
         # Some models use 'head' instead of 'fc' for the final layer
         # This should work if the model doesn't have a 'head' attribute

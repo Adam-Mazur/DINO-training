@@ -20,7 +20,7 @@ def main(cfg: DictConfig):
         config=OmegaConf.to_container(cfg, resolve=True),
     )
 
-    run_ckpt_dir = Path(cfg.paths.model_checkpoint) / wandb_logger.experiment.id
+    run_ckpt_dir = Path(cfg.paths.model_checkpoint) / str(wandb_logger.experiment.id)
     run_ckpt_dir.mkdir(parents=True, exist_ok=True)
 
     transform = DataAugmentationDINO(
