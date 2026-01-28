@@ -26,7 +26,6 @@ class DataAugmentationDINO(object):
             ]
         )
 
-        # first global crop
         self.global_transfo1 = transforms.Compose(
             [
                 transforms.RandomResizedCrop(
@@ -37,7 +36,6 @@ class DataAugmentationDINO(object):
                 normalize,
             ]
         )
-        # second global crop
         self.global_transfo2 = transforms.Compose(
             [
                 transforms.RandomResizedCrop(
@@ -49,7 +47,6 @@ class DataAugmentationDINO(object):
                 normalize,
             ]
         )
-        # transformation for the local small crops
         self.local_crops_number = local_crops_number
         self.local_transfo = transforms.Compose(
             [
