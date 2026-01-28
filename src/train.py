@@ -43,6 +43,8 @@ def main(cfg: DictConfig):
         use_bn_in_head=cfg.model.architecture.use_bn_in_head,
         norm_last_layer=cfg.model.architecture.norm_last_layer,
         model_name=cfg.model.architecture.model_name,
+        patch_size=cfg.model.architecture.patch_size,
+        drop_path_rate=cfg.model.architecture.drop_path_rate,
         lr=cfg.model.train.lr,
         min_lr=cfg.model.train.min_lr,
         batch_size_per_gpu=cfg.model.train.batch_size_per_gpu,
@@ -78,6 +80,8 @@ def main(cfg: DictConfig):
         strategy="ddp",
         logger=wandb_logger,
         callbacks=[checkpoint_cb],
+        gradient_clip_val=cfg.model.train.get("clip_grad", None),
+        gradient_clip_algorithm="norm" if "clip_grad" in cfg.model.train else None,
     )
 
     trainer.fit(model, dataloader)

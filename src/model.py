@@ -1,4 +1,5 @@
 from src.utils import trunc_normal_, cosine_scheduler, get_params_groups
+from src.vision_transformer import vit_tiny, vit_small, vit_base
 import torchvision.models as models
 import pytorch_lightning as pl
 import torch.distributed as dist
@@ -15,6 +16,8 @@ class DINOModel(pl.LightningModule):
         use_bn_in_head: bool = False,
         norm_last_layer: bool = True,
         model_name: str = "resnet18",
+        path_size: int | None = None,
+        drop_path_rate: float | None = None,
         lr: float = 0.0005,
         min_lr: float = 0.0001,
         batch_size_per_gpu: int = 64,
@@ -45,6 +48,8 @@ class DINOModel(pl.LightningModule):
             use_bn_in_head=use_bn_in_head,
             norm_last_layer=norm_last_layer,
             model_name=model_name,
+            patch_size=path_size,
+            drop_path_rate=drop_path_rate,
         )
 
         self.teacher = BaseModel(
@@ -52,6 +57,8 @@ class DINOModel(pl.LightningModule):
             use_bn_in_head=use_bn_in_head,
             norm_last_layer=True,
             model_name=model_name,
+            patch_size=path_size,
+            # Here we do not apply drop path to the teacher, as per the original DINO paper
         )
 
         self.register_buffer("center", torch.zeros(1, output_dim))
@@ -192,6 +199,8 @@ class BaseModel(nn.Module):
         use_bn_in_head: bool,
         norm_last_layer: bool,
         model_name: str = "resnet18",
+        patch_size: int | None = None,
+        drop_path_rate: float | None = None,
     ):
         super().__init__()
 
@@ -199,6 +208,18 @@ class BaseModel(nn.Module):
             self.backbone = models.resnet18(weights=None)
         elif model_name == "resnet50":
             self.backbone = models.resnet50(weights=None)
+        elif model_name == "vit_tiny":
+            self.backbone = vit_tiny(
+                patch_size=patch_size, drop_path_rate=drop_path_rate
+            )
+        elif model_name == "vit_small":
+            self.backbone = vit_small(
+                patch_size=patch_size, drop_path_rate=drop_path_rate
+            )
+        elif model_name == "vit_base":
+            self.backbone = vit_base(
+                patch_size=patch_size, drop_path_rate=drop_path_rate
+            )
         else:
             raise ValueError(f"Unsupported model name: {model_name}")
 
