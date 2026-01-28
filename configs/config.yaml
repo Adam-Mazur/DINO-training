@@ -5,9 +5,9 @@ seed: 42
 
 machine:
   num_workers: 8
-  num_gpus: 4
+  num_gpus: 8
   num_nodes: 1
-  precision: "bf16-true"
+  precision: "f16-true"
 
 paths:
   model_checkpoint: checkpoints/

@@ -4,20 +4,20 @@ transform:
   local_crops_number: 10
 
 train:
-  batch_size_per_gpu: 64
+  batch_size_per_gpu: 256
   lr: 0.0005
   min_lr: 0.00001
-  warmup_epochs: 10
+  warmup_epochs: 2
   weight_decay: 0.04
   weight_decay_end: 0.04
   warmup_teacher_temp: 0.04
   clip_grad: null
   teacher_temp: 0.07
-  warmup_teacher_temp_epochs: 30
+  warmup_teacher_temp_epochs: 3
   student_temp: 0.1
   center_momentum: 0.9
   momentum_teacher: 0.996
-  n_epochs: 50
+  n_epochs: 10
 
 architecture:
   output_dim: 65536
