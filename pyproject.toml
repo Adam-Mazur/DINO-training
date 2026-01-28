@@ -10,6 +10,7 @@ dependencies = [
     "pytorch-lightning>=2.6.0",
     "torch>=2.10.0",
     "torchvision>=0.25.0",
+    "wandb>=0.24.0",
 ]
 
 [dependency-groups]
