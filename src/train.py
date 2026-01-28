@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from pathlib import Path
 import hydra
+import torch
 
 
 @hydra.main(config_path="../configs", config_name="config", version_base=None)
@@ -46,6 +47,9 @@ def main(cfg: DictConfig):
         every_n_epochs=1,
         save_on_train_epoch_end=True,
     )
+
+    # This utilizes TensorCores
+    torch.set_float32_matmul_precision('medium') 
 
     trainer = pl.Trainer(
         max_epochs=cfg.model.train.n_epochs,
