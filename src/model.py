@@ -108,6 +108,10 @@ class DINOModel(pl.LightningModule):
         teacher_output = self.teacher(x[:2])
         student_output = self.student(x)
 
+        teacher_entropy, teacher_student_kl = self._compute_teacher_student_metrics(
+            teacher_output, student_output
+        )
+
         teacher_feats = teacher_output.detach()
         feat_var = torch.var(teacher_feats, dim=-1, unbiased=False)
         mean_feat_var = feat_var.mean()
@@ -118,12 +122,45 @@ class DINOModel(pl.LightningModule):
 
         loss = self._calculate_loss(student_output, teacher_output)
 
+        self.log("teacher_entropy", teacher_entropy, prog_bar=False, sync_dist=True)
+        self.log(
+            "teacher_student_kl", teacher_student_kl, prog_bar=False, sync_dist=True
+        )
         self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=True)
         self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=True)
         self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=True)
         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
 
         return loss
+
+    @torch.no_grad()
+    def _compute_teacher_student_metrics(self, teacher_output, student_output):
+        temp = self.teacher_temp_schedule[self.current_epoch]
+        teacher_probs = F.softmax((teacher_output - self.center) / temp, dim=-1)
+        student_scaled = student_output / self.student_temp
+        student_log_probs = [
+            F.log_softmax(chunk, dim=-1) for chunk in student_scaled.chunk(self.ncrops)
+        ]
+
+        eps = 1e-6
+        teacher_entropy = (
+            -(teacher_probs * torch.log(teacher_probs.clamp_min(eps))).sum(dim=-1)
+        ).mean()
+
+        teacher_chunks = teacher_probs.detach().chunk(2)
+        kl_total = teacher_output.new_tensor(0.0)
+        kl_terms = 0
+        for iq, q in enumerate(teacher_chunks):
+            log_q = torch.log(q.clamp_min(eps))
+            for v, student_log_prob in enumerate(student_log_probs):
+                if v == iq:
+                    continue
+                kl = torch.sum(q * (log_q - student_log_prob), dim=-1)
+                kl_total += kl.mean()
+                kl_terms += 1
+        teacher_student_kl = kl_total / kl_terms if kl_terms > 0 else kl_total
+
+        return teacher_entropy, teacher_student_kl
 
     @torch.no_grad()
     def _ema_update(self, global_step):
