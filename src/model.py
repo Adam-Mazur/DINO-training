@@ -38,6 +38,7 @@ class DINOModel(pl.LightningModule):
         self.student_temp = student_temp
         self.center_momentum = center_momentum
         self.ncrops = 2 + local_crops_number
+        self.n_dataloader_steps = n_dataloader_steps
 
         self.student = BaseModel(
             output_dim=output_dim,
@@ -88,6 +89,8 @@ class DINOModel(pl.LightningModule):
             self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
             self.teacher = nn.SyncBatchNorm.convert_sync_batchnorm(self.teacher)
 
+        self.teacher.load_state_dict(self.student.state_dict())
+
         for p in self.teacher.parameters():
             p.requires_grad = False
 
@@ -116,8 +119,8 @@ class DINOModel(pl.LightningModule):
         return loss
 
     @torch.no_grad()
-    def _ema_update(self, batch_idx):
-        m = self.momentum_schedule[batch_idx]
+    def _ema_update(self, global_step):
+        m = self.momentum_schedule[global_step]
         for param_q, param_k in zip(
             self.student.parameters(), self.teacher.parameters()
         ):
@@ -161,17 +164,18 @@ class DINOModel(pl.LightningModule):
         optimizer,
         optimizer_closure,
     ):
+        global_step = epoch * self.n_dataloader_steps + batch_idx
         for i, param_group in enumerate(optimizer.param_groups):
-            param_group["lr"] = self.lr_schedule[batch_idx]
+            param_group["lr"] = self.lr_schedule[global_step]
             if i == 0:  # only the first group is regularized
-                param_group["weight_decay"] = self.wd_schedule[batch_idx]
-
-        optimizer.zero_grad()
+                param_group["weight_decay"] = self.wd_schedule[global_step]
 
         # normal optimizer step
         optimizer.step(closure=optimizer_closure)
 
-        self._ema_update(batch_idx)
+        optimizer.zero_grad()
+
+        self._ema_update(global_step)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

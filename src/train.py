@@ -1,0 +1,83 @@
+from src.transforms import DataAugmentationDINO
+from src.model import DINOModel
+from src.utils import set_seed
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+from omegaconf import DictConfig, OmegaConf
+import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+from torchvision.datasets import ImageFolder
+from pathlib import Path
+import hydra
+
+
+@hydra.main(config_path="../configs", config_name="config", version_base=None)
+def main(cfg: DictConfig):
+    set_seed(cfg.seed)
+
+    wandb_logger = WandbLogger(
+        project="dino-training",
+        config=OmegaConf.to_container(cfg, resolve=True),
+    )
+
+    run_ckpt_dir = Path(cfg.paths.model_checkpoint) / wandb_logger.experiment.id
+    run_ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+    transform = DataAugmentationDINO(
+        cfg.transform.global_crops_scale,
+        cfg.transform.local_crops_scale,
+        cfg.transform.local_crops_number,
+    )
+
+    dataset = ImageFolder(cfg.paths.data_path, transform=transform)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=cfg.train.batch_size_per_gpu,
+        shuffle=True,
+        num_workers=cfg.machine.num_workers,
+        drop_last=True,
+    )
+
+    model = DINOModel(
+        output_dim=cfg.model.output_dim,
+        use_bn_in_head=cfg.model.use_bn_in_head,
+        norm_last_layer=cfg.model.norm_last_layer,
+        model_name=cfg.model.model_name,
+        lr=cfg.train.lr,
+        min_lr=cfg.train.min_lr,
+        batch_size_per_gpu=cfg.train.batch_size_per_gpu,
+        warmup_epochs=cfg.train.warmup_epochs,
+        weight_decay=cfg.train.weight_decay,
+        weight_decay_end=cfg.train.weight_decay_end,
+        warmup_teacher_temp=cfg.train.warmup_teacher_temp,
+        teacher_temp=cfg.train.teacher_temp,
+        warmup_teacher_temp_epochs=cfg.train.warmup_teacher_temp_epochs,
+        student_temp=cfg.train.student_temp,
+        center_momentum=cfg.train.center_momentum,
+        local_crops_number=cfg.transform.local_crops_number,
+        momentum_teacher=cfg.train.momentum_teacher,
+        world_size=cfg.machine.num_gpus * cfg.machine.num_nodes,
+        n_epochs=cfg.train.n_epochs,
+        n_dataloader_steps=len(dataloader),
+    )
+
+    checkpoint_cb = ModelCheckpoint(
+        dirpath=run_ckpt_dir,
+        filename="epoch{epoch:03d}",
+        # keep all checkpoints
+        save_top_k=-1,
+        every_n_epochs=1,
+        save_on_train_epoch_end=True,
+    )
+
+    trainer = pl.Trainer(
+        max_epochs=cfg.train.n_epochs,
+        accelerator="gpu",
+        devices=cfg.machine.num_gpus,
+        num_nodes=cfg.machine.num_nodes,
+        strategy="ddp",
+        logger=wandb_logger,
+        callbacks=[checkpoint_cb],
+    )
+
+    trainer.fit(model, dataloader)
