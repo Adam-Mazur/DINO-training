@@ -88,3 +88,7 @@ def main(cfg: DictConfig):
         )
 
     trainer.fit(model, dataloader)
+
+
+if __name__ == "__main__":
+    main()
