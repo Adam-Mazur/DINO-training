@@ -105,8 +105,7 @@ class DINOModel(pl.LightningModule):
         x, _ = batch
 
         # The teacher only takes the global views, which are always the first two elements
-        with torch.no_grad():
-            teacher_output = self.teacher(x[:2])
+        teacher_output = self.teacher(x[:2])
         student_output = self.student(x)
 
         teacher_entropy, teacher_student_kl = self._compute_teacher_student_metrics(
@@ -130,8 +129,7 @@ class DINOModel(pl.LightningModule):
         self.log("teacher_feat_var_mean", mean_feat_var, prog_bar=False, sync_dist=True)
         self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=True)
         self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=True)
-        # Here we are detaching the loss, to avoid some weird C++ warning from PyTorch
-        self.log("train_loss", loss.detach(), prog_bar=True, sync_dist=True)
+        self.log("train_loss", loss, prog_bar=True, sync_dist=True)
 
         return loss
 
@@ -175,8 +173,6 @@ class DINOModel(pl.LightningModule):
     def _calculate_loss(self, student_output, teacher_output):
         student_out = student_output / self.student_temp
         student_out = student_out.chunk(self.ncrops)
-
-        teacher_output = teacher_output.detach()
 
         temp = self.teacher_temp_schedule[self.current_epoch]
         teacher_out = F.softmax((teacher_output - self.center) / temp, dim=-1)
