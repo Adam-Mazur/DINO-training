@@ -58,6 +58,7 @@ def main(cfg: DictConfig):
         gradient_clip_val=cfg.model.train.get("clip_grad", None),
         gradient_clip_algorithm="norm" if "clip_grad" in cfg.model.train else None,
         precision=cfg.machine.precision,
+        ckpt_path=cfg.paths.resume_from_checkpoint,
     )
 
     with trainer.init_module():
