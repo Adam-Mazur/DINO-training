@@ -11,5 +11,5 @@ machine:
 
 paths:
   model_checkpoint: checkpoints/
-  data_path: data/gldv2/
+  data_path: data/gldv2/index/
   resume_from_checkpoint: null

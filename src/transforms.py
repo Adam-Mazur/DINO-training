@@ -22,7 +22,8 @@ class DataAugmentationDINO(object):
         normalize = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                # Google Landmarks Dataset v2 mean and std (estimated with 1000 sample images)
+                transforms.Normalize((0.51736622, 0.51440692, 0.49375241), (0.28642876, 0.28386362, 0.30015979)),
             ]
         )
 
