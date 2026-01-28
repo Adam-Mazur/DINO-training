@@ -16,7 +16,7 @@ class DINOModel(pl.LightningModule):
         use_bn_in_head: bool = False,
         norm_last_layer: bool = True,
         model_name: str = "resnet18",
-        path_size: int | None = None,
+        patch_size: int | None = None,
         drop_path_rate: float | None = None,
         lr: float = 0.0005,
         min_lr: float = 0.0001,
@@ -48,7 +48,7 @@ class DINOModel(pl.LightningModule):
             use_bn_in_head=use_bn_in_head,
             norm_last_layer=norm_last_layer,
             model_name=model_name,
-            patch_size=path_size,
+            patch_size=patch_size,
             drop_path_rate=drop_path_rate,
         )
 
@@ -57,7 +57,7 @@ class DINOModel(pl.LightningModule):
             use_bn_in_head=use_bn_in_head,
             norm_last_layer=True,
             model_name=model_name,
-            patch_size=path_size,
+            patch_size=patch_size,
             # Here we do not apply drop path to the teacher, as per the original DINO paper
         )
 
