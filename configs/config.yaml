@@ -1,30 +1,7 @@
+defaults:
+  - model: resnet18
+
 seed: 42
-
-transform:
-  global_crops_scale: [0.4, 1.0]
-  local_crops_scale: [0.05, 0.4]
-  local_crops_number: 8
-
-train:
-  batch_size_per_gpu: 64
-  lr: 0.0005
-  min_lr: 0.0001
-  warmup_epochs: 10
-  weight_decay: 0.04
-  weight_decay_end: 0.4
-  warmup_teacher_temp: 0.04
-  teacher_temp: 0.07
-  warmup_teacher_temp_epochs: 30
-  student_temp: 0.1
-  center_momentum: 0.9
-  momentum_teacher: 0.996
-  n_epochs: 100
-
-model:
-  output_dim: 65536
-  use_bn_in_head: True
-  norm_last_layer: True
-  model_name: resnet18
 
 machine:
   num_workers: 8
