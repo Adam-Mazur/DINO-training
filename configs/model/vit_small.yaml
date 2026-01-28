@@ -4,7 +4,7 @@ transform:
   local_crops_number: 10
 
 train:
-  batch_size_per_gpu: 256
+  batch_size_per_gpu: 128
   lr: 0.0005
   min_lr: 0.00001
   warmup_epochs: 2
