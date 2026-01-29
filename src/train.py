@@ -90,6 +90,7 @@ def main(cfg: DictConfig):
             local_crops_number=cfg.model.transform.local_crops_number,
             momentum_teacher=cfg.model.train.momentum_teacher,
             world_size=cfg.machine.num_gpus * cfg.machine.num_nodes,
+            freeze_last_layer=cfg.model.train.get("freeze_last_layer", 0),
             n_epochs=cfg.model.train.n_model_epochs,
             n_dataloader_steps=len(dataloader),
         )

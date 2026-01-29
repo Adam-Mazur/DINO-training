@@ -20,6 +20,7 @@ train:
   momentum_teacher: 0.996
   n_epochs: 10
   n_model_epochs: 800
+  freeze_last_layer: 1
 
 architecture:
   output_dim: 65536

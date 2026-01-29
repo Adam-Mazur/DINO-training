@@ -32,6 +32,7 @@ class DINOModel(pl.LightningModule):
         local_crops_number: int = 8,
         momentum_teacher: float = 0.996,
         world_size: int = 1,
+        freeze_last_layer: int = 1,
         n_epochs: int = 100,
         n_dataloader_steps: int = 1000,
     ):
@@ -42,6 +43,7 @@ class DINOModel(pl.LightningModule):
         self.center_momentum = center_momentum
         self.ncrops = 2 + local_crops_number
         self.n_dataloader_steps = n_dataloader_steps
+        self.freeze_last_layer = freeze_last_layer
 
         self.student = BaseModel(
             output_dim=output_dim,
@@ -211,15 +213,48 @@ class DINOModel(pl.LightningModule):
         optimizer_closure,
     ):
         global_step = epoch * self.n_dataloader_steps + batch_idx
+        current_lr = self.lr_schedule[global_step]
+        current_wd = self.wd_schedule[global_step]
+        current_momentum = self.momentum_schedule[global_step]
         for i, param_group in enumerate(optimizer.param_groups):
-            param_group["lr"] = self.lr_schedule[global_step]
+            param_group["lr"] = current_lr
             if i == 0:  # only the first group is regularized
-                param_group["weight_decay"] = self.wd_schedule[global_step]
+                param_group["weight_decay"] = current_wd
+
+        if epoch < self.freeze_last_layer:
+            for n, p in self.student.named_parameters():
+                if "last_layer" in n:
+                    p.grad = None
 
         # normal optimizer step
         optimizer.step(closure=optimizer_closure)
 
         optimizer.zero_grad()
+
+        self.log(
+            "lr",
+            current_lr,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=False,
+        )
+        self.log(
+            "weight_decay",
+            current_wd,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=False,
+        )
+        self.log(
+            "teacher_momentum",
+            current_momentum,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=False,
+        )
 
         self._ema_update(global_step)
 
