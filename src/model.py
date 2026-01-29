@@ -61,7 +61,8 @@ class DINOModel(pl.LightningModule):
             model_name=model_name,
             patch_size=patch_size,
             # Here we do not apply drop path to the teacher, as per the original DINO paper
-        )
+            drop_path_rate=0.0,
+        ).eval()
 
         self.register_buffer("center", torch.zeros(1, output_dim))
 
