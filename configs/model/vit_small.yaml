@@ -25,7 +25,7 @@ train:
 architecture:
   output_dim: 65536
   use_bn_in_head: false
-  norm_last_layer: false
+  norm_last_layer: true
   model_name: vit_small
   patch_size: 16
   drop_path_rate: 0.1
