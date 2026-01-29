@@ -46,11 +46,12 @@ def parse_args() -> argparse.Namespace:
 def build_dataloader(data_dir: Path, batch_size: int, num_workers: int) -> DataLoader:
     normalize = transforms.Normalize(
         # Google Landmarks Dataset v2 mean and std (estimated with 1000 sample images)
-        transforms.Normalize(
-            (0.51736622, 0.51440692, 0.49375241), (0.28642876, 0.28386362, 0.30015979)
-        ),
+        (0.51736622, 0.51440692, 0.49375241),
+        (0.28642876, 0.28386362, 0.30015979),
     )
-    transform = transforms.Compose([transforms.ToTensor(), normalize])
+    transform = transforms.Compose(
+        [transforms.Resize((224, 224)), transforms.ToTensor(), normalize]
+    )
     dataset = ImageFolderWithPaths(root=str(data_dir), transform=transform)
     return DataLoader(
         dataset,
