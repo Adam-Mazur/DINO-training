@@ -1,20 +1,20 @@
 from src.transforms import DataAugmentationDINO
 from src.model import DINOModel
-from src.utils import set_seed
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from omegaconf import DictConfig, OmegaConf
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 from torchvision.datasets import ImageFolder
 from pathlib import Path
 import hydra
 import torch
+import os
 
 
 @hydra.main(config_path="../configs", config_name="config", version_base=None)
 def main(cfg: DictConfig):
-    set_seed(cfg.seed)
+    pl.seed_everything(cfg.seed, workers=True)
 
     wandb_logger = WandbLogger(
         project="dino-training",
@@ -31,15 +31,6 @@ def main(cfg: DictConfig):
     )
 
     dataset = ImageFolder(cfg.paths.data_path, transform=transform)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=cfg.model.train.batch_size_per_gpu,
-        shuffle=True,
-        num_workers=cfg.machine.num_workers,
-        pin_memory=True,
-        persistent_workers=True,
-        drop_last=True,
-    )
 
     checkpoint_cb = ModelCheckpoint(
         dirpath=run_ckpt_dir,
@@ -65,6 +56,24 @@ def main(cfg: DictConfig):
         gradient_clip_algorithm="norm" if "clip_grad" in cfg.model.train else None,
         precision=cfg.machine.precision,
         accumulate_grad_batches=cfg.model.train.get("accumulate_grad_batches", 1),
+    )
+
+    sampler = DistributedSampler(
+        dataset,
+        num_replicas=cfg.machine.num_gpus * cfg.machine.num_nodes,
+        rank=int(os.environ.get("RANK", 0)),
+        shuffle=True,
+    )
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=cfg.model.train.batch_size_per_gpu,
+        sampler=sampler,
+        shuffle=False,
+        num_workers=cfg.machine.num_workers,
+        pin_memory=True,
+        persistent_workers=True,
+        drop_last=True,
     )
 
     with trainer.init_module():
