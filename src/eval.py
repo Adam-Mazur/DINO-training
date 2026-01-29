@@ -8,6 +8,7 @@ import argparse
 import pickle
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 
 class ImageFolderWithPaths(datasets.ImageFolder):
@@ -68,6 +69,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataloader = build_dataloader(args.data_dir, args.batch_size, args.num_workers)
+    torch.serialization.add_safe_globals([np.core.multiarray.scalar])
     model = DINOModel.load_from_checkpoint(str(args.checkpoint))
     model.eval()
     model.to(device)
