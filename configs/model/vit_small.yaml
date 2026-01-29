@@ -6,14 +6,14 @@ transform:
 train:
   batch_size_per_gpu: 128
   accumulate_grad_batches: 1
-  lr: 0.0005
+  lr: 0.002
   min_lr: 0.00001
   warmup_epochs: 10
   weight_decay: 0.04
   weight_decay_end: 0.4
   warmup_teacher_temp: 0.04
   clip_grad: null
-  teacher_temp: 0.04
+  teacher_temp: 0.03
   warmup_teacher_temp_epochs: 0
   student_temp: 0.1
   center_momentum: 0.9
