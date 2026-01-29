@@ -69,7 +69,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataloader = build_dataloader(args.data_dir, args.batch_size, args.num_workers)
-    torch.serialization.add_safe_globals([np.core.multiarray.scalar])
+    torch.serialization.add_safe_globals([np.core.multiarray.scalar, np.dtype, np.dtypes.Float64DType])
     model = DINOModel.load_from_checkpoint(str(args.checkpoint))
     model.eval()
     model.to(device)
