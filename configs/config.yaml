@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 seed: 42
-compile_model: true
+compile_model: false
 
 machine:
   num_workers: 32
