@@ -5,25 +5,26 @@ transform:
 
 train:
   batch_size_per_gpu: 128
-  accumulate_grad_batches: 2
+  accumulate_grad_batches: 1
   lr: 0.0005
   min_lr: 0.00001
-  warmup_epochs: 3
+  warmup_epochs: 10
   weight_decay: 0.04
-  weight_decay_end: 0.04
+  weight_decay_end: 0.4
   warmup_teacher_temp: 0.04
   clip_grad: null
-  teacher_temp: 0.1
-  warmup_teacher_temp_epochs: 4
+  teacher_temp: 0.07
+  warmup_teacher_temp_epochs: 30
   student_temp: 0.1
   center_momentum: 0.9
   momentum_teacher: 0.996
   n_epochs: 10
+  n_model_epochs: 800
 
 architecture:
   output_dim: 65536
-  use_bn_in_head: False
-  norm_last_layer: False
+  use_bn_in_head: false
+  norm_last_layer: false
   model_name: vit_small
   patch_size: 16
   drop_path_rate: 0.1

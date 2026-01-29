@@ -90,7 +90,7 @@ def main(cfg: DictConfig):
             local_crops_number=cfg.model.transform.local_crops_number,
             momentum_teacher=cfg.model.train.momentum_teacher,
             world_size=cfg.machine.num_gpus * cfg.machine.num_nodes,
-            n_epochs=cfg.model.train.n_epochs,
+            n_epochs=cfg.model.train.n_model_epochs,
             n_dataloader_steps=len(dataloader),
         )
 
