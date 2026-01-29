@@ -131,7 +131,7 @@ class DINOModel(pl.LightningModule):
         )
         self.log("teacher_feat_l2_mean", mean_feat_l2, prog_bar=False, sync_dist=False)
         self.log("teacher_feat_l2_std", std_feat_l2, prog_bar=False, sync_dist=False)
-        self.log("train_loss", loss, prog_bar=True, sync_dist=False)
+        self.log("train_loss", loss.detach(), prog_bar=True, sync_dist=False)
 
         return loss
 
@@ -227,6 +227,7 @@ class DINOModel(pl.LightningModule):
         optimizer = torch.optim.AdamW(
             # Some parameters, like biases, were not regularized in the original DINO code
             get_params_groups(self.student),
+            fused=True,
         )
         return optimizer
 

@@ -3,9 +3,10 @@ defaults:
   - _self_
 
 seed: 42
+compile_model: true
 
 machine:
-  num_workers: 16
+  num_workers: 32
   num_gpus: 8
   num_nodes: 1
   precision: "bf16-true"

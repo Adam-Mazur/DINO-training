@@ -37,6 +37,7 @@ def main(cfg: DictConfig):
         shuffle=True,
         num_workers=cfg.machine.num_workers,
         pin_memory=True,
+        persistent_workers=True,
         drop_last=True,
     )
 
@@ -50,7 +51,7 @@ def main(cfg: DictConfig):
     )
 
     # This utilizes TensorCores
-    torch.set_float32_matmul_precision('medium') 
+    torch.set_float32_matmul_precision("medium")
 
     trainer = pl.Trainer(
         max_epochs=cfg.model.train.n_epochs,
@@ -63,6 +64,7 @@ def main(cfg: DictConfig):
         gradient_clip_val=cfg.model.train.get("clip_grad", None),
         gradient_clip_algorithm="norm" if "clip_grad" in cfg.model.train else None,
         precision=cfg.machine.precision,
+        accumulate_grad_batches=cfg.model.train.get("accumulate_grad_batches", 1),
     )
 
     with trainer.init_module():
@@ -75,7 +77,8 @@ def main(cfg: DictConfig):
             drop_path_rate=cfg.model.architecture.drop_path_rate,
             lr=cfg.model.train.lr,
             min_lr=cfg.model.train.min_lr,
-            batch_size_per_gpu=cfg.model.train.batch_size_per_gpu,
+            batch_size_per_gpu=cfg.model.train.batch_size_per_gpu
+            * cfg.model.train.get("accumulate_grad_batches", 1),
             warmup_epochs=cfg.model.train.warmup_epochs,
             weight_decay=cfg.model.train.weight_decay,
             weight_decay_end=cfg.model.train.weight_decay_end,
@@ -90,6 +93,9 @@ def main(cfg: DictConfig):
             n_epochs=cfg.model.train.n_epochs,
             n_dataloader_steps=len(dataloader),
         )
+
+        if cfg.get("compile_model", False):
+            model = torch.compile(model)
 
     trainer.fit(model, dataloader, ckpt_path=cfg.paths.resume_from_checkpoint)
 

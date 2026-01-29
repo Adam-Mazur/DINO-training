@@ -5,6 +5,7 @@ transform:
 
 train:
   batch_size_per_gpu: 128
+  accumulate_grad_batches: 2
   lr: 0.0005
   min_lr: 0.00001
   warmup_epochs: 2
