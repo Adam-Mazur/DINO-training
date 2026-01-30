@@ -63,9 +63,21 @@ I used the following metrics to evaluate the performance of my image retrieval m
 - R-Precision
 - F1 measure
 
-Here are the results on both datasets for easy, medium, and hard setups:
+Here are the results on both datasets for easy, medium, and hard setups on the Oxford-5k dataset:
 
-<!-- TODO -->
+| Setting | mAP | mP@10 | R-Precision | F1 measure |
+|---------|-----|-------|-------------|------------|
+| Easy    | 0.5230 | 0.4838 | 0.4935 | 0.2678 |
+| Medium  | 0.3800 | 0.5300 | 0.3633 | 0.2043 | 
+| Hard    | 0.1382 | 0.1943 | 0.1350 | 0.0903 |
+
+and Paris-6k dataset:
+
+| Setting | mAP | mP@10 | R-Precision | F1 measure |
+|---------|-----|-------|-------------|------------|
+| Easy    | 0.7906 | 0.9114 | 0.7273 | 0.2301 |
+| Medium  | 0.6204 | 0.9586 | 0.5811 | 0.0998 | 
+| Hard    | 0.3421 | 0.5957 | 0.3614 | 0.1105 |
 
 ## Traning plots
 
@@ -81,7 +93,18 @@ The metrics 2 and 3 are meant to monitor the collapse, i.e. when the model start
 
 Here are some training plots:
 
-<!-- TODO -->
+<table>
+  <tr>
+    <td><img src="images/entropy.png" width="200"></td>
+    <td><img src="images/kl_divergence.png" width="200"></td>
+    <td><img src="images/l2_mean.png" width="200"></td>
+  </tr>
+  <tr>
+    <td><img src="images/l2_std.png" width="200"></td>
+    <td><img src="images/train_loss.png" width="200"></td>
+    <td><img src="images/var_mean.png" width="200"></td>
+  </tr>
+</table>
 
 # Streamlit app
 
@@ -122,4 +145,5 @@ This project was done as a part of Computer Vision course at PUT. I have complet
 | Distributed training | +1 | I used 8 GPUs for training. |
 | W&B | +1 | I logged training metrics using W&B. |
 | Streamlit | +1 | I created a simple Streamlit app for image retrieval using my trained model. |
+| DVC | +2 | I used DVC to version control my dataset and benchmarks. |
 | Explanations of 3 at least predictions | +2 | The explanations are provided in the Streamlit app, and the screenshots are included in the README. |
