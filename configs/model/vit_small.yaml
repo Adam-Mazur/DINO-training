@@ -11,7 +11,7 @@ train:
   warmup_epochs: 10
   weight_decay: 0.04
   weight_decay_end: 0.4
-  warmup_teacher_temp: 0.02
+  warmup_teacher_temp: 0.03
   clip_grad: null
   teacher_temp: 0.04
   warmup_teacher_temp_epochs: 30
