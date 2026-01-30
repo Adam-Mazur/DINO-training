@@ -78,7 +78,7 @@ def main():
     with torch.no_grad():
         for images, img_paths in dataloader:
             images = images.to(device)
-            feats = model.teacher(images)
+            feats = model.teacher.backbone(images)
             embeddings.append(feats.cpu())
             paths.extend(img_paths)
 
