@@ -110,9 +110,12 @@ Here are some training plots:
 
 I've also created a simple Streamlit app for image retrieval using my trained model. The app allows users to upload images and showcases a similarity matrix calculated using my model's feature vectors. Additionally, it provides explanations for predictions made by the model.
 
-Screenshots of the app:
-
-<!-- TODO -->
+The main page:
+![Streamlit App Screenshot 3](images/sc3.png)
+The similarity matrix:
+![Streamlit App Screenshot 2](images/sc2.png)
+The explanations of the results (attention maps):
+![Streamlit App Screenshot 1](images/sc1.png)
 
 # Setup
 

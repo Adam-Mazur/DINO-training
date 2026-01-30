@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
+from torchvision.transforms.functional import to_pil_image
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -25,9 +26,10 @@ if hasattr(pd.options.mode, "string_storage"):
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMAGE_TYPES = ["png", "jpg", "jpeg", "bmp", "webp"]
+
 TRANSFORM = transforms.Compose(
     [
-        transforms.Resize((224, 224)),
+        transforms.Resize((512, 512)),
         transforms.ToTensor(),
         transforms.Normalize(
             mean=(0.51736622, 0.51440692, 0.49375241),
@@ -57,6 +59,29 @@ def load_model(checkpoint_path: str):
 def _prepare_tensors(images: List[Image.Image]) -> torch.Tensor:
     tensors = [TRANSFORM(img) for img in images]
     return torch.stack(tensors)
+
+
+def _compute_attention_map(model: torch.nn.Module, image: Image.Image) -> Image.Image:
+    tensor = TRANSFORM(image)
+    height = tensor.shape[1] - tensor.shape[1] % 16
+    width = tensor.shape[2] - tensor.shape[2] % 16
+    tensor = tensor[:, :height, :width].unsqueeze(0).to(DEVICE)
+    w_featmap = tensor.shape[-2] // 16
+    h_featmap = tensor.shape[-1] // 16
+
+    with torch.no_grad():
+        attentions = model.get_last_selfattention(tensor)
+
+    nh = attentions.shape[1]
+    attentions = attentions[0, :, 0, 1:].reshape(nh, -1)
+    attentions = attentions.reshape(nh, w_featmap, h_featmap)
+    attention_grid = F.interpolate(
+        attentions.unsqueeze(0), scale_factor=16, mode="nearest"
+    )[0].cpu()
+    attention_map = attention_grid.mean(0, keepdim=True)
+    attention_map = attention_map - attention_map.min()
+    attention_map = attention_map / attention_map.max().clamp_min(1e-6)
+    return to_pil_image(attention_map)
 
 
 def _similarity_dataframe(embeddings: torch.Tensor, labels: List[str]) -> pd.DataFrame:
@@ -110,14 +135,70 @@ def main() -> None:
 
     images: List[Image.Image] = []
     labels: List[str] = []
+    attention_maps: List[Optional[Image.Image]] = []
+    attention_error: Optional[str] = None
     if uploads:
-        cols = st.columns(min(3, len(uploads)))
-        for idx, upload in enumerate(uploads):
+        for upload in uploads:
             image = Image.open(upload).convert("RGB")
             images.append(image)
             labels.append(upload.name)
-            with cols[idx % len(cols)]:
-                st.image(image, caption=upload.name, use_column_width=True)
+
+        attention_model: Optional[torch.nn.Module] = None
+        if checkpoint_path:
+            try:
+                attention_model = load_model(str(checkpoint_path))
+            except Exception as exc:
+                attention_error = f"Failed to load checkpoint for attention maps: {exc}"
+        else:
+            attention_error = "Provide a checkpoint to visualize attention maps."
+
+        if attention_model is not None:
+            for image in images:
+                try:
+                    attention_maps.append(
+                        _compute_attention_map(attention_model, image)
+                    )
+                except Exception as exc:  # pragma: no cover - bubble up to UI
+                    attention_maps.append(None)
+                    attention_error = f"Failed to compute attention maps: {exc}"
+        else:
+            attention_maps = [None] * len(images)
+
+        if attention_error:
+            if checkpoint_path:
+                st.warning(attention_error)
+            else:
+                st.info(attention_error)
+
+        base_cols = min(6, len(images)) or 1
+        cols_per_row = min(6, max(2, base_cols + base_cols % 2))
+        cols = st.columns(cols_per_row)
+        slot_idx = 0
+
+        for idx, (image, label) in enumerate(zip(images, labels)):
+            if slot_idx >= cols_per_row:
+                cols = st.columns(cols_per_row)
+                slot_idx = 0
+            with cols[slot_idx]:
+                st.image(image, caption=label, use_column_width=True)
+            slot_idx += 1
+
+            if slot_idx >= cols_per_row:
+                cols = st.columns(cols_per_row)
+                slot_idx = 0
+            with cols[slot_idx]:
+                attention_image = (
+                    attention_maps[idx] if idx < len(attention_maps) else None
+                )
+                if attention_image is not None:
+                    st.image(
+                        attention_image,
+                        caption=f"{label} attention",
+                        use_column_width=True,
+                    )
+                else:
+                    st.caption("Attention unavailable")
+            slot_idx += 1
 
     compute = st.button(
         "Compute similarities", disabled=not (checkpoint_path and len(images) >= 2)
