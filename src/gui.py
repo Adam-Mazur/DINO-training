@@ -1,8 +1,10 @@
 from pathlib import Path
 import sys
 import tempfile
+import os
 from typing import List, Optional
-import numpy as np
+
+os.environ.setdefault("PANDAS_DTYPE_BACKEND", "numpy")
 import pandas as pd
 import streamlit as st
 import torch
@@ -14,14 +16,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from src.model import DINOModel  # noqa: E402
+from src.vision_transformer import vit_small  # noqa: E402
 
 
 st.set_page_config(page_title="Image Retrieval GUI", layout="wide")
+if hasattr(pd.options.mode, "string_storage"):
+    pd.options.mode.string_storage = "python"
 
-torch.serialization.add_safe_globals(
-    [np.core.multiarray.scalar, np.dtype, np.dtypes.Float64DType]
-)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMAGE_TYPES = ["png", "jpg", "jpeg", "bmp", "webp"]
 TRANSFORM = transforms.Compose(
@@ -45,8 +46,9 @@ def _persist_uploaded_file(uploaded_file) -> Path:
 
 
 @st.cache_resource(show_spinner=False)
-def load_model(checkpoint_path: str) -> DINOModel:
-    model = DINOModel.load_from_checkpoint(checkpoint_path)
+def load_model(checkpoint_path: str):
+    model = vit_small()
+    model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE))
     model.eval()
     model.to(DEVICE)
     return model
@@ -75,7 +77,7 @@ def main() -> None:
     checkpoint_path_input = st.text_input(
         "…or type a checkpoint path",
         value="",
-        placeholder="/mnt/c/users/adamm/documents/code/dino_training/checkpoints/epochepoch=009.ckpt",
+        placeholder="checkpoints/final.pth",
     )
 
     checkpoint_path: Optional[Path] = None
@@ -138,10 +140,12 @@ def main() -> None:
 
         tensors = _prepare_tensors(images).to(DEVICE)
         with torch.no_grad():
-            embeddings = model.teacher.backbone(tensors)
+            embeddings = model(tensors)
 
         df = _similarity_dataframe(embeddings, labels)
-        st.subheader("Cosine similarity matrix")
+        matrix = df.to_numpy(dtype="float32", copy=False)
+        index = pd.Index([str(label) for label in labels], dtype="object", name="image")
+        df = pd.DataFrame(matrix, index=index, columns=index, copy=False)
         st.dataframe(df.style.format("{:.3f}"), use_container_width=True)
 
 
