@@ -1,0 +1,6 @@
+outs:
+- md5: f79c8c8906333b27a0a86f21d8f3549e.dir
+  size: 81475681705
+  nfiles: 708431
+  hash: md5
+  path: gldv2

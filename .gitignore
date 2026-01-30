@@ -1,6 +1,5 @@
 /.venv/
 /checkpoints/
-/data/
 /outputs/
 /lightning_logs/
 /multirun/
