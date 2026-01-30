@@ -95,14 +95,14 @@ Here are some training plots:
 
 <table>
   <tr>
-    <td><img src="images/entropy.png" width="200"></td>
-    <td><img src="images/kl_divergence.png" width="200"></td>
-    <td><img src="images/l2_mean.png" width="200"></td>
+    <td><img src="images/entropy.png"></td>
+    <td><img src="images/kl_divergence.png"></td>
+    <td><img src="images/l2_mean.png"></td>
   </tr>
   <tr>
-    <td><img src="images/l2_std.png" width="200"></td>
-    <td><img src="images/train_loss.png" width="200"></td>
-    <td><img src="images/var_mean.png" width="200"></td>
+    <td><img src="images/l2_std.png"></td>
+    <td><img src="images/train_loss.png"></td>
+    <td><img src="images/var_mean.png"></td>
   </tr>
 </table>
 
