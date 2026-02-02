@@ -132,21 +132,3 @@ Some important hyperparameters used during training are:
 ## Runtime environment
 
 I trained my model using 8 NVIDIA RTX 4090 GPUs with 24GB of VRAM each. The training time for 10 epochs was approximately 4 hours. The inference time took around 5-10 minutes (since I didn't use distributed inference).
-
-
-# Completed items
-
-This project was done as a part of Computer Vision course at PUT. I have completed the following items from the project specification:
-
-| Item | Points | Description |
-|------|--------|-------------|
-| Problem: Search Engine | +2 | |
-| Model | +1 | I used a ready-made architecture and trained it from scratch. |
-| Non-trivial solution in the architecture | +1 | I used DINO self-supervised training approach, which combines self-distillation and momentum encoder techniques. |
-| Evaluation on at least 10k samples | +1 | I evaluated my model on the revised Oxford-5k and Paris-6k datasets, which contain more than 10k images in total. |
-| Data augmentation | +1 | Data augmentations are necessary for DINO training. I described them in the README. |
-| Distributed training | +1 | I used 8 GPUs for training. |
-| W&B | +1 | I logged training metrics using W&B. |
-| Streamlit | +1 | I created a simple Streamlit app for image retrieval using my trained model. |
-| DVC | +2 | I used DVC to version control my dataset and benchmarks. |
-| Explanations of 3 at least predictions | +2 | The explanations are provided in the Streamlit app, and the screenshots are included in the README. |
